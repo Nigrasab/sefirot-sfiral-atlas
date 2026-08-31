@@ -7,7 +7,6 @@ import HomePage from './pages/HomePage';
 import JournalPage from './pages/JournalPage';
 import LabPage from './pages/LabPage';
 import NavigatorPage from './pages/NavigatorPage';
-import SfiralPage from './pages/SfiralPage';
 import TreePage from './pages/TreePage';
 
 export default function App() {
@@ -17,7 +16,6 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/tree" element={<TreePage />} />
-          <Route path="/sfiral" element={<SfiralPage />} />
           <Route path="/navigator" element={<NavigatorPage />} />
           <Route path="/gematria" element={<GematriaPage />} />
           <Route path="/encyclopedia" element={<EncyclopediaPage />} />
