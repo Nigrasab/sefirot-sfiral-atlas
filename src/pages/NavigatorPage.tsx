@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { sefirot } from '../data/sefirot';
 import { calculateBalance } from '../lib/balance';
 import { shortestPath } from '../lib/graph';
+import { exportState } from '../lib/export';
+import AnimatedRoute from '../components/AnimatedRoute';
 
 export default function NavigatorPage() {
   const initial = useMemo(
@@ -23,32 +25,68 @@ export default function NavigatorPage() {
 
   const recommendation =
     balance.dominant === 'left'
-      ? 'Состояние содержит много ограничения и анализа. Рекомендуется активировать расширяющие и сердечные качества.'
+      ? 'Состояние содержит много ограничения и анализа. Рекомендуется активировать расширяющие и сердечные качества (Хесед, Тиферет).'
       : balance.dominant === 'right'
-        ? 'Состояние содержит много расширения. Полезно добавить форму, границу и точность.'
+        ? 'Состояние содержит много расширения и импульса. Полезно добавить форму, границу и точность (Гвура, Ход).'
         : balance.dominant === 'central'
-          ? 'Центральная ось выражена хорошо. Можно углублять равновесие и переход к проявлению.'
-          : 'Состояние смешанное. Рекомендуется стабилизировать центральную ось.';
+          ? 'Центральная ось выражена хорошо. Можно углублять равновесие и переход к проявлению (Малхут).'
+          : 'Состояние смешанное. Рекомендуется стабилизировать центральную ось через Тиферет.';
+
+  const handleExport = () => {
+    const state = {
+      values,
+      from,
+      to,
+      route,
+      routeNames,
+      balance,
+      recommendation,
+      timestamp: Date.now(),
+      date: new Date().toISOString()
+    };
+    exportState(state);
+  };
+
+  const handleSave = () => {
+    const state = {
+      values,
+      from,
+      to,
+      route,
+      routeNames,
+      balance,
+      recommendation,
+      timestamp: Date.now()
+    };
+
+    const existing = JSON.parse(localStorage.getItem('ssa-journal') || '[]');
+    existing.push(state);
+    localStorage.setItem('ssa-journal', JSON.stringify(existing));
+    alert('Состояние сохранено в журнал');
+  };
 
   return (
     <div className="page">
       <section className="panel">
         <h2>Навигатор состояния</h2>
         <p className="muted small">
-          Оцените 10 качеств по шкале от 0 до 10. Приложение посчитает баланс колонн и маршрут
-          между выбранными сфирот.
+          Оцените 10 качеств по шкале от 0 до 10. Приложение посчитает баланс колонн,
+          построит маршрут между сфирот и предложит фазовый переход.
         </p>
       </section>
 
       <div className="grid grid-2">
         <div className="panel">
-          <h3>Качества</h3>
+          <h3>Качества (по сфирот)</h3>
 
           {sefirot.map((sefirah) => (
             <div className="slider-row" key={sefirah.id}>
               <div className="slider-head">
-                <span>{sefirah.name}</span>
-                <span className="muted small">{sefirah.quality}</span>
+                <span>
+                  <span style={{ color: sefirah.color, marginRight: 6 }}>●</span>
+                  {sefirah.name}
+                </span>
+                <span className="muted small">{values[sefirah.id] ?? 5}</span>
               </div>
 
               <input
@@ -64,16 +102,17 @@ export default function NavigatorPage() {
                   }))
                 }
               />
+              <div className="muted small">{sefirah.quality}</div>
             </div>
           ))}
         </div>
 
         <div className="panel">
-          <h3>Маршрут</h3>
+          <h3>Маршрут и баланс</h3>
 
           <div className="grid" style={{ marginBottom: 14 }}>
             <label className="small muted">
-              Откуда
+              Откуда (текущее состояние)
               <select
                 className="select"
                 value={from}
@@ -81,14 +120,14 @@ export default function NavigatorPage() {
               >
                 {sefirot.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.id}. {s.name}
+                    {s.id}. {s.name} ({s.translit})
                   </option>
                 ))}
               </select>
             </label>
 
             <label className="small muted">
-              Куда
+              Куда (целевое состояние)
               <select
                 className="select"
                 value={to}
@@ -96,7 +135,7 @@ export default function NavigatorPage() {
               >
                 {sefirot.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.id}. {s.name}
+                    {s.id}. {s.name} ({s.translit})
                   </option>
                 ))}
               </select>
@@ -104,35 +143,54 @@ export default function NavigatorPage() {
           </div>
 
           <div className="result-box">
-            <div className="small muted">Маршрут</div>
-            <div>{routeNames || '—'}</div>
+            <div className="small muted">Маршрут перехода</div>
+            <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>
+              {routeNames || '—'}
+            </div>
           </div>
+
+          <AnimatedRoute route={route} speed={1800} />
 
           <div className="stat-grid" style={{ marginTop: 12 }}>
             <div className="stat-card">
               <div className="stat-label">Левая колонна</div>
               <div className="stat-value">{balance.left}</div>
+              <div className="muted small">строгость, форма</div>
             </div>
 
             <div className="stat-card">
               <div className="stat-label">Правая колонна</div>
               <div className="stat-value">{balance.right}</div>
+              <div className="muted small">милосердие, расширение</div>
             </div>
 
             <div className="stat-card">
               <div className="stat-label">Центральная колонна</div>
               <div className="stat-value">{balance.central}</div>
+              <div className="muted small">равновесие</div>
             </div>
 
             <div className="stat-card">
-              <div className="stat-label">Напряжение</div>
+              <div className="stat-label">Напряжение L–R</div>
               <div className="stat-value">{balance.tension}</div>
+              <div className="muted small">
+                {balance.tension > 10 ? 'высокое' : balance.tension > 5 ? 'среднее' : 'низкое'}
+              </div>
             </div>
           </div>
 
           <div className="result-box" style={{ marginTop: 12 }}>
             <div className="small muted">Рекомендация</div>
-            <div>{recommendation}</div>
+            <div style={{ marginTop: 4 }}>{recommendation}</div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+            <button className="button" onClick={handleSave}>
+              Сохранить в журнал
+            </button>
+            <button className="button" onClick={handleExport}>
+              Экспорт JSON
+            </button>
           </div>
         </div>
       </div>
