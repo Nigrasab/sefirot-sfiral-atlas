@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import UnifiedTreeSfiral from '../components/UnifiedTreeSfiral';
+import UnifiedTreeSfiral3D from '../components/UnifiedTreeSfiral3D';
 import { pillarNames, sefirot } from '../data/sefirot';
 
 export default function TreePage() {
@@ -18,20 +18,21 @@ export default function TreePage() {
   return (
     <div className="page">
       <section className="panel">
-        <h2>Единая карта: Древо Сфирот + Сфираль</h2>
+        <h2>3D-карта: Древо Сфирот + Сфираль</h2>
         <p className="muted small">
-          Древо Сфирот как проекция сфиральной топологии. Два витка Сфирали соответствуют
-          левой и правой колоннам Древа; центральная ось — зона S-петли и фазовых переходов.
+          Интерактивная 3D-модель. Вращайте сцену мышью (зажмите и тяните),
+          масштабируйте колёсиком. Два витка Сфирали (синий V+ и красный V−)
+          огибают колонны Древа, золотая точка движется по сфиральной траектории.
         </p>
       </section>
 
-      <div className="grid grid-2">
-        <UnifiedTreeSfiral
-          selected={selected}
-          onSelect={setSelected}
-          sfiralS={sfiralS}
-        />
+      <UnifiedTreeSfiral3D
+        selected={selected}
+        onSelect={setSelected}
+        sfiralS={sfiralS}
+      />
 
+      <div className="grid grid-2">
         <div className="panel">
           {current ? (
             <>
@@ -78,144 +79,84 @@ export default function TreePage() {
               </div>
             </>
           ) : (
-            <p className="muted">Выберите сфиру на карте.</p>
+            <p className="muted">Выберите сфиру на 3D-сцене.</p>
           )}
+        </div>
 
-          <div
-            style={{
-              marginTop: 22,
-              borderTop: '1px solid rgba(255,255,255,0.08)',
-              paddingTop: 18
-            }}
-          >
-            <h3 style={{ marginTop: 0 }}>Сфиральное время s</h3>
+        <div className="panel">
+          <h3 style={{ marginTop: 0 }}>Сфиральное время s</h3>
 
-            <div className="slider-row">
-              <div className="slider-head">
-                <span className="muted">Параметр фазы</span>
-                <strong>{sfiralS.toFixed(2)}</strong>
-              </div>
-
-              <input
-                type="range"
-                min={-1}
-                max={1}
-                step={0.01}
-                value={sfiralS}
-                onChange={(event) => setSfiralS(Number(event.target.value))}
-              />
+          <div className="slider-row">
+            <div className="slider-head">
+              <span className="muted">Параметр фазы</span>
+              <strong>{sfiralS.toFixed(2)}</strong>
             </div>
 
-            <div className="result-box" style={{ marginTop: 10 }}>
-              <div className="small muted">Текущая зона</div>
-              <div style={{ fontWeight: 600 }}>{sfiralZone}</div>
-            </div>
+            <input
+              type="range"
+              min={-1}
+              max={1}
+              step={0.01}
+              value={sfiralS}
+              onChange={(event) => setSfiralS(Number(event.target.value))}
+            />
+          </div>
 
-            <div className="result-box" style={{ marginTop: 10 }}>
-              <div className="small muted">Интерпретация</div>
-              <div className="small">
-                Двигая слайдер, вы перемещаете точку по сфиральной траектории:
-                от левого витка через S-петлю (зону инверсии и выбора) к правому витку.
-                Это модель любого фазового перехода — кризиса, решения, переоценки.
-              </div>
-            </div>
+          <div className="result-box" style={{ marginTop: 10 }}>
+            <div className="small muted">Текущая зона</div>
+            <div style={{ fontWeight: 600 }}>{sfiralZone}</div>
+          </div>
 
-            <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
-              <button className="button secondary" onClick={() => setSfiralS(-1)}>
-                V−
-              </button>
-
-              <button className="button secondary" onClick={() => setSfiralS(-0.5)}>
-                −0.5
-              </button>
-
-              <button className="button active" onClick={() => setSfiralS(0)}>
-                S-петля
-              </button>
-
-              <button className="button secondary" onClick={() => setSfiralS(0.5)}>
-                +0.5
-              </button>
-
-              <button className="button secondary" onClick={() => setSfiralS(1)}>
-                V+
-              </button>
+          <div className="result-box" style={{ marginTop: 10 }}>
+            <div className="small muted">Интерпретация</div>
+            <div className="small">
+              Двигая слайдер, вы перемещаете золотую точку по сфиральной
+              траектории: от красного витка V− через S-петлю (зону инверсии)
+              к синему витку V+. Это модель фазового перехода.
             </div>
           </div>
+
+          <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+            <button className="button secondary" onClick={() => setSfiralS(-1)}>
+              V−
+            </button>
+            <button className="button secondary" onClick={() => setSfiralS(-0.5)}>
+              −0.5
+            </button>
+            <button className="button active" onClick={() => setSfiralS(0)}>
+              S-петля
+            </button>
+            <button className="button secondary" onClick={() => setSfiralS(0.5)}>
+              +0.5
+            </button>
+            <button className="button secondary" onClick={() => setSfiralS(1)}>
+              V+
+            </button>
+          </div>
+
+          <section className="panel" style={{ marginTop: 20, background: 'transparent', border: 'none', padding: 0, boxShadow: 'none' }}>
+            <h4 style={{ marginTop: 0 }}>Сопоставление</h4>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Древо</th>
+                    <th>Сфираль</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Сфира</td><td>Узел состояния</td></tr>
+                  <tr><td>Путь (22)</td><td>Класс траектории</td></tr>
+                  <tr><td>Левая колонна</td><td>Виток V−</td></tr>
+                  <tr><td>Правая колонна</td><td>Виток V+</td></tr>
+                  <tr><td>Центральная</td><td>Ось инверсии</td></tr>
+                  <tr><td>Даат</td><td>S-петля</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
       </div>
-
-      <section className="panel" style={{ marginTop: 20 }}>
-        <h3>Сопоставление Древа и Сфирали</h3>
-
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Древо Сфирот</th>
-                <th>Сфиральная модель</th>
-                <th>Смысл</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              <tr>
-                <td>Сфира</td>
-                <td>Узел состояния</td>
-                <td>Локализованная конфигурация системы</td>
-              </tr>
-
-              <tr>
-                <td>Путь (22)</td>
-                <td>Класс траектории</td>
-                <td>Допустимый топологический переход</td>
-              </tr>
-
-              <tr>
-                <td>Левая колонна</td>
-                <td>Виток V−</td>
-                <td>Строгость, форма, сжатие</td>
-              </tr>
-
-              <tr>
-                <td>Правая колонна</td>
-                <td>Виток V+</td>
-                <td>Милосердие, расширение</td>
-              </tr>
-
-              <tr>
-                <td>Центральная колонна</td>
-                <td>Ось инверсии</td>
-                <td>Равновесие, баланс</td>
-              </tr>
-
-              <tr>
-                <td>Даат</td>
-                <td>S-петля</td>
-                <td>Зона фазового перехода, скрытое знание</td>
-              </tr>
-
-              <tr>
-                <td>Путь огненного меча</td>
-                <td>Нисхождение по s</td>
-                <td>Эманация: от Кетер к Малхут</td>
-              </tr>
-
-              <tr>
-                <td>Путь змея</td>
-                <td>Восхождение по s</td>
-                <td>Возвращение: от Малхут к Кетер</td>
-              </tr>
-
-              <tr>
-                <td>Эманация</td>
-                <td>Масштабное ветвление</td>
-                <td>Фрактальное вложение (1 → 0.5 → 0.25)</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
     </div>
   );
 }
