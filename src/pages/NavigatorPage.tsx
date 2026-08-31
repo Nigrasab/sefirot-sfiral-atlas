@@ -1,0 +1,141 @@
+import { useMemo, useState } from 'react';
+import { sefirot } from '../data/sefirot';
+import { calculateBalance } from '../lib/balance';
+import { shortestPath } from '../lib/graph';
+
+export default function NavigatorPage() {
+  const initial = useMemo(
+    () => Object.fromEntries(sefirot.map((s) => [s.id, 5])) as Record<number, number>,
+    []
+  );
+
+  const [values, setValues] = useState(initial);
+  const [from, setFrom] = useState(10);
+  const [to, setTo] = useState(1);
+
+  const balance = calculateBalance(values);
+  const route = shortestPath(from, to);
+
+  const routeNames = route
+    .map((id) => sefirot.find((s) => s.id === id)?.name)
+    .filter(Boolean)
+    .join(' → ');
+
+  const recommendation =
+    balance.dominant === 'left'
+      ? 'Состояние содержит много ограничения и анализа. Рекомендуется активировать расширяющие и сердечные качества.'
+      : balance.dominant === 'right'
+        ? 'Состояние содержит много расширения. Полезно добавить форму, границу и точность.'
+        : balance.dominant === 'central'
+          ? 'Центральная ось выражена хорошо. Можно углублять равновесие и переход к проявлению.'
+          : 'Состояние смешанное. Рекомендуется стабилизировать центральную ось.';
+
+  return (
+    <div className="page">
+      <section className="panel">
+        <h2>Навигатор состояния</h2>
+        <p className="muted small">
+          Оцените 10 качеств по шкале от 0 до 10. Приложение посчитает баланс колонн и маршрут
+          между выбранными сфирот.
+        </p>
+      </section>
+
+      <div className="grid grid-2">
+        <div className="panel">
+          <h3>Качества</h3>
+
+          {sefirot.map((sefirah) => (
+            <div className="slider-row" key={sefirah.id}>
+              <div className="slider-head">
+                <span>{sefirah.name}</span>
+                <span className="muted small">{sefirah.quality}</span>
+              </div>
+
+              <input
+                type="range"
+                min={0}
+                max={10}
+                step={1}
+                value={values[sefirah.id] ?? 5}
+                onChange={(event) =>
+                  setValues((prev) => ({
+                    ...prev,
+                    [sefirah.id]: Number(event.target.value)
+                  }))
+                }
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="panel">
+          <h3>Маршрут</h3>
+
+          <div className="grid" style={{ marginBottom: 14 }}>
+            <label className="small muted">
+              Откуда
+              <select
+                className="select"
+                value={from}
+                onChange={(event) => setFrom(Number(event.target.value))}
+              >
+                {sefirot.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.id}. {s.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="small muted">
+              Куда
+              <select
+                className="select"
+                value={to}
+                onChange={(event) => setTo(Number(event.target.value))}
+              >
+                {sefirot.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.id}. {s.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="result-box">
+            <div className="small muted">Маршрут</div>
+            <div>{routeNames || '—'}</div>
+          </div>
+
+          <div className="stat-grid" style={{ marginTop: 12 }}>
+            <div className="stat-card">
+              <div className="stat-label">Левая колонна</div>
+              <div className="stat-value">{balance.left}</div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-label">Правая колонна</div>
+              <div className="stat-value">{balance.right}</div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-label">Центральная колонна</div>
+              <div className="stat-value">{balance.central}</div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-label">Напряжение</div>
+              <div className="stat-value">{balance.tension}</div>
+            </div>
+          </div>
+
+          <div className="result-box" style={{ marginTop: 12 }}>
+            <div className="small muted">Рекомендация</div>
+            <div>{recommendation}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
