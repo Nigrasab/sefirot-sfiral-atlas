@@ -22,19 +22,9 @@ body {
 }
 
 body {
-  font-family:
-    Inter,
-    system-ui,
-    -apple-system,
-    Segoe UI,
-    Roboto,
-    Arial,
-    sans-serif;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   color: var(--text);
-  background:
-    radial-gradient(circle at top, rgba(212, 175, 55, 0.14), transparent 32%),
-    radial-gradient(circle at 80% 20%, rgba(125, 211, 252, 0.1), transparent 28%),
-    var(--bg);
+  background: radial-gradient(circle at top, rgba(212, 175, 55, 0.14), transparent 32%), radial-gradient(circle at 80% 20%, rgba(125, 211, 252, 0.1), transparent 28%), var(--bg);
   min-height: 100vh;
 }
 
@@ -298,9 +288,7 @@ svg {
 .sefira-node circle {
   transform-box: fill-box;
   transform-origin: center;
-  transition:
-    transform 0.18s ease,
-    filter 0.18s ease;
+  transition: transform 0.18s ease, filter 0.18s ease;
 }
 
 .sefira-node:hover circle {
@@ -411,15 +399,12 @@ canvas {
     flex-direction: column;
     align-items: flex-start;
   }
-
   .nav {
     width: 100%;
   }
-
   .hero {
     min-height: 60vh;
   }
-
   .panel {
     padding: 16px;
   }
