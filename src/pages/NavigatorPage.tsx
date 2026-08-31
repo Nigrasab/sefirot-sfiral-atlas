@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { sefirot } from '../data/sefirot';
 import { calculateBalance } from '../lib/balance';
 import { shortestPath } from '../lib/graph';
-import { exportState } from '../lib/export';
 import AnimatedRoute from '../components/AnimatedRoute';
 
 export default function NavigatorPage() {
@@ -44,7 +43,13 @@ export default function NavigatorPage() {
       timestamp: Date.now(),
       date: new Date().toISOString()
     };
-    exportState(state);
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ssa-state-${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleSave = () => {
@@ -58,7 +63,6 @@ export default function NavigatorPage() {
       recommendation,
       timestamp: Date.now()
     };
-
     const existing = JSON.parse(localStorage.getItem('ssa-journal') || '[]');
     existing.push(state);
     localStorage.setItem('ssa-journal', JSON.stringify(existing));
