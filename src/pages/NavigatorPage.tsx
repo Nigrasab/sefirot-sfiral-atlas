@@ -1,14 +1,19 @@
 import { useMemo, useState } from 'react';
+import AnimatedRoute from '../components/AnimatedRoute';
 import { sefirot } from '../data/sefirot';
 import { calculateBalance } from '../lib/balance';
 import { shortestPath } from '../lib/graph';
-import AnimatedRoute from '../components/AnimatedRoute';
 
 export default function NavigatorPage() {
-  const initial = useMemo(
-    () => Object.fromEntries(sefirot.map((s) => [s.id, 5])) as Record<number, number>,
-    []
-  );
+  const initial = useMemo<Record<number, number>>(() => {
+    const result: Record<number, number> = {};
+
+    for (const sefirah of sefirot) {
+      result[sefirah.id] = 5;
+    }
+
+    return result;
+  }, []);
 
   const [values, setValues] = useState(initial);
   const [from, setFrom] = useState(10);
@@ -43,7 +48,11 @@ export default function NavigatorPage() {
       timestamp: Date.now(),
       date: new Date().toISOString()
     };
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+
+    const blob = new Blob([JSON.stringify(state, null, 2)], {
+      type: 'application/json'
+    });
+
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -63,9 +72,11 @@ export default function NavigatorPage() {
       recommendation,
       timestamp: Date.now()
     };
+
     const existing = JSON.parse(localStorage.getItem('ssa-journal') || '[]');
     existing.push(state);
     localStorage.setItem('ssa-journal', JSON.stringify(existing));
+
     alert('Состояние сохранено в журнал');
   };
 
@@ -106,6 +117,7 @@ export default function NavigatorPage() {
                   }))
                 }
               />
+
               <div className="muted small">{sefirah.quality}</div>
             </div>
           ))}
@@ -178,7 +190,11 @@ export default function NavigatorPage() {
               <div className="stat-label">Напряжение L–R</div>
               <div className="stat-value">{balance.tension}</div>
               <div className="muted small">
-                {balance.tension > 10 ? 'высокое' : balance.tension > 5 ? 'среднее' : 'низкое'}
+                {balance.tension > 10
+                  ? 'высокое'
+                  : balance.tension > 5
+                    ? 'среднее'
+                    : 'низкое'}
               </div>
             </div>
           </div>
@@ -192,6 +208,7 @@ export default function NavigatorPage() {
             <button className="button" onClick={handleSave}>
               Сохранить в журнал
             </button>
+
             <button className="button" onClick={handleExport}>
               Экспорт JSON
             </button>
