@@ -1,4 +1,4 @@
-# Sefirot–Sfiral Atlas
+# Sefirot–Sfiral-Atlas
 
 Интерактивный атлас Древа Сфирот и Сфирали.
 
