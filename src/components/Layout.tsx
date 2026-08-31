@@ -2,8 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 
 const links = [
   { to: '/', label: 'Главная' },
-  { to: '/tree', label: 'Древо' },
-  { to: '/sfiral', label: 'Сфираль' },
+  { to: '/tree', label: 'Древо · Сфираль' },
   { to: '/navigator', label: 'Навигатор' },
   { to: '/gematria', label: 'Гематрия' },
   { to: '/encyclopedia', label: 'Энциклопедия' },
@@ -41,7 +40,7 @@ export default function Layout() {
       </main>
 
       <footer className="footer">
-        Sefirot–Sfiral Atlas · интерактивная модель Древа Сфирот, Сфирали и фазовых переходов
+        Sefirot–Sfiral Atlas · единая модель Древа Сфирот и Сфирали
       </footer>
     </div>
   );
