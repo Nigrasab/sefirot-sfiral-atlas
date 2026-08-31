@@ -12,5 +12,5 @@ export function downloadJson(data: unknown, filename: string) {
 }
 
 export function exportState(state: Record<string, unknown>) {
-  downloadJson(state, `sefirot-state-${Date.now()}.json`);
+  downloadJson(state, `ssa-state-${Date.now()}.json`);
 }
