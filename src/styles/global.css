@@ -59,7 +59,7 @@ textarea {
 }
 
 .header-inner {
-  width: min(1220px, calc(100% - 32px));
+  width: min(1400px, calc(100% - 32px));
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -100,7 +100,7 @@ textarea {
 
 .main {
   flex: 1;
-  width: min(1220px, calc(100% - 32px));
+  width: min(1400px, calc(100% - 32px));
   margin: 0 auto;
   padding: 28px 0 72px;
 }
@@ -169,12 +169,6 @@ textarea {
 
 .grid-2 {
   grid-template-columns: 1.2fr 0.8fr;
-}
-
-@media (max-width: 960px) {
-  .grid-2 {
-    grid-template-columns: 1fr;
-  }
 }
 
 .button {
@@ -328,12 +322,6 @@ svg {
   gap: 12px;
 }
 
-@media (max-width: 640px) {
-  .stat-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 .stat-card {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -397,6 +385,145 @@ canvas {
   border-radius: 20px;
 }
 
+/* === Новый layout: Древо + приборная доска === */
+.tree-page-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 20px;
+  align-items: start;
+}
+
+.visualization-panel {
+  position: sticky;
+  top: 80px;
+  align-self: start;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 24px;
+  padding: 12px;
+  box-shadow: 0 0 70px rgba(212, 175, 55, 0.05);
+}
+
+.control-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.control-panel .panel {
+  padding: 16px;
+  border-radius: 18px;
+}
+
+.control-panel h2 {
+  font-size: 20px;
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.control-panel h3 {
+  font-size: 15px;
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: var(--gold);
+}
+
+.control-panel h4 {
+  font-size: 13px;
+  margin-top: 0;
+  margin-bottom: 6px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.control-panel p {
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.control-panel .result-box {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.control-panel .badge {
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.control-panel .slider-row {
+  padding: 8px 0;
+}
+
+.control-panel .slider-head {
+  font-size: 12px;
+}
+
+.control-panel .button {
+  font-size: 12px;
+  padding: 7px 11px;
+  border-radius: 10px;
+}
+
+.control-panel .table-wrap table {
+  font-size: 12px;
+}
+
+.control-panel .table-wrap th,
+.control-panel .table-wrap td {
+  padding: 6px 8px;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(5, 7, 15, 0.92);
+  color: var(--gold);
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-size: 14px;
+  z-index: 10;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+/* === Адаптивность === */
+@media (max-width: 1280px) {
+  .tree-page-layout {
+    grid-template-columns: minmax(0, 1fr) 380px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .tree-page-layout {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 960px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .tree-page-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .visualization-panel {
+    position: relative;
+    top: 0;
+  }
+
+  .control-panel {
+    gap: 12px;
+  }
+}
+
 @media (max-width: 640px) {
   .header-inner {
     flex-direction: column;
@@ -413,5 +540,9 @@ canvas {
 
   .panel {
     padding: 16px;
+  }
+
+  .stat-grid {
+    grid-template-columns: 1fr;
   }
 }
