@@ -3,37 +3,143 @@ import UnifiedTreeSfiral3D from '../components/UnifiedTreeSfiral3D';
 import { pillarNames, sefirot } from '../data/sefirot';
 
 export default function TreePage() {
-  const [selected, setSelected] = useState<number | null>(6);
-  const [sfiralS, setSfiralS] = useState(0);
+  const [selectedSefira, setSelectedSefira] = useState<number | null>(6);
+  const [activeSfiralIndex, setActiveSfiralIndex] = useState(0);
+  const [sfiralPhase, setSfiralPhase] = useState(0.5);
+  const [fractalLevels, setFractalLevels] = useState<boolean[]>([true, true, true]);
+  const [universeOpacity, setUniverseOpacity] = useState(0.14);
 
-  const current = sefirot.find((s) => s.id === selected);
+  const current = sefirot.find((s) => s.id === selectedSefira);
+  const groupAngle = ((activeSfiralIndex / 72) * 360).toFixed(1);
+  const linkedSefira = sefirot[(activeSfiralIndex % 10)];
 
-  const sfiralZone =
-    sfiralS < -0.15
-      ? 'V− : первый виток (левая колонна)'
-      : sfiralS > 0.15
-        ? 'V+ : второй виток (правая колонна)'
-        : 'S-петля : центральная ось инверсии';
+  const toggleLevel = (idx: number) => {
+    setFractalLevels((prev) => prev.map((v, i) => (i === idx ? !v : v)));
+  };
 
   return (
-    <div className="page">
-      <section className="panel">
-        <h2>3D-карта: Древо Сфирот + Сфираль</h2>
-        <p className="muted small">
-          Интерактивная 3D-модель. Вращайте сцену мышью (зажмите и тяните),
-          масштабируйте колёсиком. Два витка Сфирали (синий V+ и красный V−)
-          огибают колонны Древа, золотая точка движется по сфиральной траектории.
-        </p>
-      </section>
+    <div className="tree-page-layout">
+      {/* Узкое вертикальное окно анимации */}
+      <div className="animation-window">
+        <UnifiedTreeSfiral3D
+          selectedSefira={selectedSefira}
+          onSelectSefira={setSelectedSefira}
+          activeSfiralIndex={activeSfiralIndex}
+          sfiralPhase={sfiralPhase}
+          fractalLevels={fractalLevels}
+          universeOpacity={universeOpacity}
+        />
+      </div>
 
-      <UnifiedTreeSfiral3D
-        selected={selected}
-        onSelect={setSelected}
-        sfiralS={sfiralS}
-      />
-
-      <div className="grid grid-2">
+      {/* Приборная доска справа */}
+      <div className="control-panel">
         <div className="panel">
+          <h2>Древо · Сфираль</h2>
+          <p className="muted small">
+            Модель расширяющейся Вселенной — полупрозрачный круговорот Сфиралей вокруг Древа.
+            Центральная колонна Древа совпадает с продольной осью Сфирали.
+          </p>
+        </div>
+
+        {/* Активная Сфираль */}
+        <div className="panel">
+          <h3>Активная Сфираль</h3>
+
+          <div className="slider-row">
+            <div className="slider-head">
+              <span className="muted">Группа (0–71)</span>
+              <strong>{activeSfiralIndex}</strong>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={71}
+              step={1}
+              value={activeSfiralIndex}
+              onChange={(e) => setActiveSfiralIndex(Number(e.target.value))}
+            />
+          </div>
+
+          <div className="slider-row">
+            <div className="slider-head">
+              <span className="muted">Фаза перехода</span>
+              <strong>{sfiralPhase.toFixed(2)}</strong>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={sfiralPhase}
+              onChange={(e) => setSfiralPhase(Number(e.target.value))}
+            />
+          </div>
+
+          <div className="result-box">
+            <div className="small muted">Угол группы</div>
+            <div>{groupAngle}°</div>
+          </div>
+
+          <div className="result-box" style={{ marginTop: 8 }}>
+            <div className="small muted">Связана с сфирой</div>
+            <div>
+              {linkedSefira ? `${linkedSefira.id}. ${linkedSefira.name} (${linkedSefira.hebrew})` : '—'}
+            </div>
+          </div>
+        </div>
+
+        {/* Модель Вселенной */}
+        <div className="panel">
+          <h3>Модель Вселенной</h3>
+
+          <div className="slider-row">
+            <div className="slider-head">
+              <span className="muted">Прозрачность</span>
+              <strong>{universeOpacity.toFixed(2)}</strong>
+            </div>
+            <input
+              type="range"
+              min={0.02}
+              max={0.5}
+              step={0.01}
+              value={universeOpacity}
+              onChange={(e) => setUniverseOpacity(Number(e.target.value))}
+            />
+          </div>
+
+          <div className="fractal-toggles">
+            <label className="toggle-item">
+              <input
+                type="checkbox"
+                checked={fractalLevels[0]}
+                onChange={() => toggleLevel(0)}
+              />
+              <span>Масштаб 1</span>
+            </label>
+
+            <label className="toggle-item">
+              <input
+                type="checkbox"
+                checked={fractalLevels[1]}
+                onChange={() => toggleLevel(1)}
+              />
+              <span>Масштаб 0.5</span>
+            </label>
+
+            <label className="toggle-item">
+              <input
+                type="checkbox"
+                checked={fractalLevels[2]}
+                onChange={() => toggleLevel(2)}
+              />
+              <span>Масштаб 0.25</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Выбранная сфира */}
+        <div className="panel">
+          <h3>Сфира</h3>
           {current ? (
             <>
               <div className="badge">
@@ -41,120 +147,33 @@ export default function TreePage() {
                 {pillarNames[current.pillar]}
               </div>
 
-              <h2 style={{ marginTop: 12 }}>
+              <div style={{ marginTop: 10, fontSize: 18, fontWeight: 700 }}>
                 {current.name} <span className="muted">({current.translit})</span>
-              </h2>
-
-              <div style={{ fontSize: 28, color: current.color }}>
+              </div>
+              <div style={{ fontSize: 24, color: current.color, marginTop: 2 }}>
                 {current.hebrew}
               </div>
 
-              <p style={{ marginTop: 12 }}>{current.meaning}</p>
+              <p style={{ marginTop: 10 }}>{current.meaning}</p>
 
-              <div className="result-box">
+              <div className="result-box" style={{ marginTop: 10 }}>
                 <div className="small muted">Качество</div>
                 <div>{current.quality}</div>
               </div>
 
-              <div className="result-box" style={{ marginTop: 10 }}>
-                <div className="small muted">Мир проявления</div>
+              <div className="result-box" style={{ marginTop: 8 }}>
+                <div className="small muted">Мир</div>
                 <div>{current.world}</div>
               </div>
 
-              <div className="result-box" style={{ marginTop: 10 }}>
+              <div className="result-box" style={{ marginTop: 8 }}>
                 <div className="small muted">Ключевые слова</div>
                 <div>{current.keywords.join(' · ')}</div>
               </div>
-
-              <div className="result-box" style={{ marginTop: 10 }}>
-                <div className="small muted">В сфиральной топологии</div>
-                <div>
-                  {current.pillar === 'left' &&
-                    'Левый виток V−: форма, ограничение, анализ, сжатие.'}
-                  {current.pillar === 'right' &&
-                    'Правый виток V+: расширение, импульс, отдача, движение.'}
-                  {current.pillar === 'central' &&
-                    'Центральная ось: инвариантное преобразование, инверсия, баланс.'}
-                </div>
-              </div>
             </>
           ) : (
-            <p className="muted">Выберите сфиру на 3D-сцене.</p>
+            <p className="muted">Выберите сфиру в окне анимации.</p>
           )}
-        </div>
-
-        <div className="panel">
-          <h3 style={{ marginTop: 0 }}>Сфиральное время s</h3>
-
-          <div className="slider-row">
-            <div className="slider-head">
-              <span className="muted">Параметр фазы</span>
-              <strong>{sfiralS.toFixed(2)}</strong>
-            </div>
-
-            <input
-              type="range"
-              min={-1}
-              max={1}
-              step={0.01}
-              value={sfiralS}
-              onChange={(event) => setSfiralS(Number(event.target.value))}
-            />
-          </div>
-
-          <div className="result-box" style={{ marginTop: 10 }}>
-            <div className="small muted">Текущая зона</div>
-            <div style={{ fontWeight: 600 }}>{sfiralZone}</div>
-          </div>
-
-          <div className="result-box" style={{ marginTop: 10 }}>
-            <div className="small muted">Интерпретация</div>
-            <div className="small">
-              Двигая слайдер, вы перемещаете золотую точку по сфиральной
-              траектории: от красного витка V− через S-петлю (зону инверсии)
-              к синему витку V+. Это модель фазового перехода.
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
-            <button className="button secondary" onClick={() => setSfiralS(-1)}>
-              V−
-            </button>
-            <button className="button secondary" onClick={() => setSfiralS(-0.5)}>
-              −0.5
-            </button>
-            <button className="button active" onClick={() => setSfiralS(0)}>
-              S-петля
-            </button>
-            <button className="button secondary" onClick={() => setSfiralS(0.5)}>
-              +0.5
-            </button>
-            <button className="button secondary" onClick={() => setSfiralS(1)}>
-              V+
-            </button>
-          </div>
-
-          <section className="panel" style={{ marginTop: 20, background: 'transparent', border: 'none', padding: 0, boxShadow: 'none' }}>
-            <h4 style={{ marginTop: 0 }}>Сопоставление</h4>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Древо</th>
-                    <th>Сфираль</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td>Сфира</td><td>Узел состояния</td></tr>
-                  <tr><td>Путь (22)</td><td>Класс траектории</td></tr>
-                  <tr><td>Левая колонна</td><td>Виток V−</td></tr>
-                  <tr><td>Правая колонна</td><td>Виток V+</td></tr>
-                  <tr><td>Центральная</td><td>Ось инверсии</td></tr>
-                  <tr><td>Даат</td><td>S-петля</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
         </div>
       </div>
     </div>
