@@ -264,41 +264,6 @@ textarea:focus {
   padding: 16px;
 }
 
-.tree-wrap,
-.sfiral-wrap {
-  overflow: auto;
-  border-radius: 20px;
-  background: rgba(0, 0, 0, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.sefira-node {
-  cursor: pointer;
-}
-
-.sefira-node circle {
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: transform 0.18s ease, filter 0.18s ease;
-}
-
-.sefira-node:hover circle {
-  transform: scale(1.08);
-  filter: drop-shadow(0 0 16px rgba(212, 175, 55, 0.4));
-}
-
-.sefira-node.selected circle {
-  stroke: #ffffff;
-  stroke-width: 3;
-  filter: drop-shadow(0 0 18px rgba(212, 175, 55, 0.55));
-}
-
 .slider-row {
   display: grid;
   gap: 8px;
@@ -314,6 +279,11 @@ svg {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--gold);
 }
 
 .stat-grid {
@@ -376,38 +346,41 @@ label {
   gap: 6px;
 }
 
-input[type="range"] {
-  width: 100%;
-  accent-color: var(--gold);
-}
-
 canvas {
   border-radius: 20px;
 }
 
-/* === Новый layout: Древо + приборная доска === */
+/* ============================================================
+   НОВЫЙ LAYOUT: узкое вертикальное окно анимации + приборная доска справа
+   ============================================================ */
 .tree-page-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
+  display: flex;
   gap: 20px;
-  align-items: start;
+  align-items: flex-start;
 }
 
-.visualization-panel {
-  position: sticky;
-  top: 80px;
-  align-self: start;
-  background: var(--panel);
+.animation-window {
+  width: 480px;
+  height: 840px;
+  flex-shrink: 0;
+  border-radius: 20px;
+  overflow: hidden;
   border: 1px solid var(--panel-border);
-  border-radius: 24px;
-  padding: 12px;
-  box-shadow: 0 0 70px rgba(212, 175, 55, 0.05);
+  background: #0f172a;
+}
+
+.animation-window > div {
+  width: 100%;
+  height: 100%;
 }
 
 .control-panel {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  max-height: 840px;
+  overflow-y: auto;
 }
 
 .control-panel .panel {
@@ -417,24 +390,13 @@ canvas {
 
 .control-panel h2 {
   font-size: 20px;
-  margin-top: 0;
   margin-bottom: 8px;
 }
 
 .control-panel h3 {
   font-size: 15px;
-  margin-top: 0;
-  margin-bottom: 10px;
   color: var(--gold);
-}
-
-.control-panel h4 {
-  font-size: 13px;
-  margin-top: 0;
-  margin-bottom: 6px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  margin-bottom: 10px;
 }
 
 .control-panel p {
@@ -477,50 +439,51 @@ canvas {
   padding: 6px 8px;
 }
 
-.loading-overlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(5, 7, 15, 0.92);
-  color: var(--gold);
-  padding: 16px 32px;
-  border-radius: 12px;
-  font-size: 14px;
-  z-index: 10;
-  border: 1px solid rgba(212, 175, 55, 0.3);
+.fractal-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
 }
 
-/* === Адаптивность === */
-@media (max-width: 1280px) {
+.toggle-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.toggle-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+
+/* ============================================================
+   Адаптивность
+   ============================================================ */
+@media (max-width: 1100px) {
   .tree-page-layout {
-    grid-template-columns: minmax(0, 1fr) 380px;
+    flex-direction: column;
   }
-}
 
-@media (max-width: 1024px) {
-  .tree-page-layout {
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: 16px;
+  .animation-window {
+    width: 100%;
+    height: 640px;
+  }
+
+  .control-panel {
+    max-height: none;
+    width: 100%;
   }
 }
 
 @media (max-width: 960px) {
   .grid-2 {
     grid-template-columns: 1fr;
-  }
-
-  .tree-page-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .visualization-panel {
-    position: relative;
-    top: 0;
-  }
-
-  .control-panel {
-    gap: 12px;
   }
 }
 
