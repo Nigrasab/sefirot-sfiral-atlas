@@ -1,405 +1,383 @@
 import { useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Text, Tube, Sphere, Stars, Html } from '@react-three/drei';
+import { OrbitControls, Text, Line, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 import { sefirot } from '../data/sefirot';
 import { treeEdges } from '../data/treeEdges';
 
-interface Props {
-  selected: number | null;
-  onSelect: (id: number) => void;
-  sfiralS: number;
+/* ============================================================
+   ФОРМУЛА СФИРАЛИ (основная):
+   R(s) = α(s)·r⁻(s) + β(s)·r⁺(s),  α²+β²=1
+   r⁺(s) = M·r⁻(−s) + c  (зеркальная антисимметрия)
+   ============================================================ */
+
+interface SfiralParams {
+  height: number;
+  radius: number;
+  turns: number;
+  phase: number;
+  segments: number;
 }
 
-// Правильная геометрия Сфирали из Sfiralium-Core
-// V⁻: r(s) = (R·cos(θ+φ), R·sin(θ+φ), z₀+kz·θ)
-// V⁺: r⁺(s) = M·r⁻(−s) + c (зеркальная антисимметрия)
-// R(s) = α(s)·r⁻(s) + β(s)·r⁺(s) - S-петля
+// Генерация точек одной вертикальной Сфирали (два зеркальных витка + S-переход)
+function generateSfiralPoints(opts: SfiralParams): THREE.Vector3[] {
+  const { height, radius, turns, phase, segments } = opts;
+  const points: THREE.Vector3[] = [];
 
-function generateSfiralGeometry() {
-  const R_coil = 4.0;
-  const R_arc = R_coil / 2.0;
-  const Height_Coil = 3.0;
-  const Height_S = 1.0;
-  const Turns = 1.2;
-  const Resolution = 300;
+  for (let i = 0; i <= segments; i++) {
+    const s = -1 + (2 * i) / segments; // −1 … +1
+    const y = (height / 2) * s;
 
-  // Part 1: S-Arc Right (переход к V+)
-  const s_arc_right: THREE.Vector3[] = [];
-  const res_arc = Math.floor(Resolution * 0.3);
-  for (let i = 0; i <= res_arc; i++) {
-    const t = i / res_arc;
-    const phi = Math.PI * (1 - t);
-    const x = R_arc + R_arc * Math.cos(phi);
-    const y = -R_arc * Math.sin(phi);
-    const z = (Height_S / 2) * t;
-    s_arc_right.push(new THREE.Vector3(x, y, z));
+    // Зеркальная антисимметрия: левый виток (s<0) ↔ правый виток (s>0)
+    const mirror = s <= 0 ? 1 : -1;
+
+    // Радиус сужается к центру — область S-петли
+    const r = radius * (0.25 + 0.75 * Math.abs(s));
+
+    const theta = turns * Math.PI * s + phase;
+
+    const x = mirror * r * Math.cos(theta);
+    const z = r * Math.sin(theta);
+
+    points.push(new THREE.Vector3(x, y, z));
   }
 
-  // Part 2: Main Coil Right (V+ виток - будущее)
-  const coil_right: THREE.Vector3[] = [];
-  const res_coil = Math.floor(Resolution * 0.7);
-  const z_start_coil = Height_S / 2;
-  for (let i = 1; i <= res_coil; i++) {
-    const t = i / res_coil;
-    const theta = Turns * 2 * Math.PI * t;
-    const x = R_coil * Math.cos(theta);
-    const y = R_coil * Math.sin(theta);
-    const z = z_start_coil + Height_Coil * t;
-    coil_right.push(new THREE.Vector3(x, y, z));
-  }
-
-  // Зеркальная антисимметрия: V- (прошлое) = M · V+(−s)
-  const s_arc_left: THREE.Vector3[] = [];
-  for (let i = s_arc_right.length - 1; i >= 0; i--) {
-    const p = s_arc_right[i];
-    s_arc_left.push(new THREE.Vector3(-p.x, -p.y, -p.z));
-  }
-
-  const coil_left: THREE.Vector3[] = [];
-  for (let i = coil_right.length - 1; i >= 0; i--) {
-    const p = coil_right[i];
-    coil_left.push(new THREE.Vector3(-p.x, -p.y, -p.z));
-  }
-
-  // Непрерывные пути
-  // V- (левый виток) = coil_left → начало s_arc_left
-  const vMinusPath = coil_left.concat(s_arc_left.slice(0, 2));
-  // S-петля = s_arc_left → s_arc_right (через центр!)
-  const sLoopPath = s_arc_left.concat(s_arc_right);
-  // V+ (правый виток) = конец s_arc_right → coil_right
-  const vPlusPath = [s_arc_right[s_arc_right.length - 1]].concat(coil_right);
-
-  return { vMinusPath, vPlusPath, sLoopPath, centralPoint: new THREE.Vector3(0, 0, 0) };
+  return points;
 }
 
-// Виток Сфирали (V- или V+)
-function SfiralCoil({
-  path,
-  color,
-  emissive
-}: {
-  path: THREE.Vector3[];
-  color: string;
-  emissive: string;
-}) {
-  const curve = useMemo(() => new THREE.CatmullRomCurve3(path), [path]);
-
-  return (
-    <Tube
-      args={[curve, 100, 0.12, 12, false]}
-    >
-      <meshPhongMaterial
-        color={color}
-        emissive={emissive}
-        emissiveIntensity={0.4}
-        shininess={100}
-        transparent
-        opacity={0.9}
-      />
-    </Tube>
-  );
+interface UniverseLevelConfig {
+  numGroups: number;
+  circulationRadius: number;
+  sfiralHeight: number;
+  sfiralRadius: number;
+  turns: number;
+  segments: number;
 }
 
-// S-петля фазового перехода (золотая, соединяет V- и V+)
-function SfiralLoop({ path }: { path: THREE.Vector3[] }) {
-  const curve = useMemo(() => new THREE.CatmullRomCurve3(path), [path]);
+// Один фрактальный уровень модели Вселенной (круговорот Сфиралей)
+function buildLevelGeometry(cfg: UniverseLevelConfig): number[] {
+  const positions: number[] = [];
 
-  return (
-    <Tube args={[curve, 80, 0.15, 12, false]}>
-      <meshPhongMaterial
-        color="#fbbf24"
-        emissive="#b45309"
-        emissiveIntensity={0.7}
-        shininess={120}
-      />
-    </Tube>
-  );
+  for (let g = 0; g < cfg.numGroups; g++) {
+    const groupAngle = (g / cfg.numGroups) * Math.PI * 2;
+
+    const cx = cfg.circulationRadius * Math.cos(groupAngle);
+    const cz = cfg.circulationRadius * Math.sin(groupAngle);
+
+    const localPoints = generateSfiralPoints({
+      height: cfg.sfiralHeight,
+      radius: cfg.sfiralRadius,
+      turns: cfg.turns,
+      phase: groupAngle,
+      segments: cfg.segments
+    });
+
+    const cos = Math.cos(groupAngle);
+    const sin = Math.sin(groupAngle);
+
+    const transformed = localPoints.map((p) => {
+      const rx = p.x * cos + p.z * sin;
+      const rz = -p.x * sin + p.z * cos;
+      return new THREE.Vector3(rx + cx, p.y, rz + cz);
+    });
+
+    for (let i = 0; i < transformed.length - 1; i++) {
+      positions.push(
+        transformed[i].x, transformed[i].y, transformed[i].z,
+        transformed[i + 1].x, transformed[i + 1].y, transformed[i + 1].z
+      );
+    }
+  }
+
+  return positions;
 }
 
-// Центральный узел (Тиферет / Даат) - точка инверсии
-function CentralNode() {
-  const meshRef = useRef<THREE.Mesh>(null);
+// Полная модель Вселенной: три фрактальных уровня (1 → 0.5 → 0.25)
+function buildUniverseGeometry(levels: boolean[]): THREE.BufferGeometry {
+  const positions: number[] = [];
+
+  const base: UniverseLevelConfig = {
+    numGroups: 72,
+    circulationRadius: 5.5,
+    sfiralHeight: 11,
+    sfiralRadius: 0.9,
+    turns: 2.2,
+    segments: 36
+  };
+
+  // Уровень 0 — масштаб 1
+  if (levels[0]) positions.push(...buildLevelGeometry(base));
+
+  // Уровень 1 — масштаб 0.5 (расширяющийся слой наружу)
+  if (levels[1]) {
+    positions.push(
+      ...buildLevelGeometry({
+        numGroups: 72,
+        circulationRadius: 8.5,
+        sfiralHeight: 5.5,
+        sfiralRadius: 0.45,
+        turns: 2.2,
+        segments: 20
+      })
+    );
+  }
+
+  // Уровень 2 — масштаб 0.25 (самый внешний слой)
+  if (levels[2]) {
+    positions.push(
+      ...buildLevelGeometry({
+        numGroups: 72,
+        circulationRadius: 11.5,
+        sfiralHeight: 2.75,
+        sfiralRadius: 0.22,
+        turns: 2.2,
+        segments: 12
+      })
+    );
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
+  return geo;
+}
+
+// Полупрозрачная модель Вселенной (медленно вращающийся круговорот)
+function UniverseModel({ levels, opacity }: { levels: boolean[]; opacity: number }) {
+  const ref = useRef<THREE.Group>(null);
+
+  const geometry = useMemo(() => buildUniverseGeometry(levels), [levels]);
 
   useFrame((state) => {
-    if (meshRef.current) {
-      const scale = 1 + Math.sin(state.clock.elapsedTime * 4) * 0.15;
-      meshRef.current.scale.set(scale, scale, scale);
+    if (ref.current) {
+      ref.current.rotation.y = state.clock.elapsedTime * 0.06;
     }
   });
 
   return (
-    <mesh ref={meshRef}>
-      <sphereGeometry args={[0.45, 32, 32]} />
-      <meshPhongMaterial
-        color="#fbbf24"
-        emissive="#f59e0b"
-        emissiveIntensity={0.9}
-      />
-    </mesh>
+    <group ref={ref}>
+      <lineSegments geometry={geometry}>
+        <lineBasicMaterial color="#7dd3fc" transparent opacity={opacity} />
+      </lineSegments>
+    </group>
   );
 }
 
-// Движущаяся точка по сфиральному времени s
-function MovingPhasePoint({ s }: { s: number }) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const { vMinusPath, sLoopPath, vPlusPath } = useMemo(generateSfiralGeometry, []);
+// Активная Сфираль (подсвеченная) + движущаяся точка фазы
+function ActiveSfiral({ index, phase, numGroups }: { index: number; phase: number; numGroups: number }) {
+  const groupAngle = (index / numGroups) * Math.PI * 2;
+
+  const curve = useMemo(() => {
+    const cx = 5.5 * Math.cos(groupAngle);
+    const cz = 5.5 * Math.sin(groupAngle);
+
+    const localPoints = generateSfiralPoints({
+      height: 11,
+      radius: 0.9,
+      turns: 2.2,
+      phase: groupAngle,
+      segments: 80
+    });
+
+    const cos = Math.cos(groupAngle);
+    const sin = Math.sin(groupAngle);
+
+    const transformed = localPoints.map((p) => {
+      const rx = p.x * cos + p.z * sin;
+      const rz = -p.x * sin + p.z * cos;
+      return new THREE.Vector3(rx + cx, p.y, rz + cz);
+    });
+
+    return new THREE.CatmullRomCurve3(transformed);
+  }, [groupAngle]);
+
+  const pointRef = useRef<THREE.Mesh>(null);
 
   useFrame(() => {
-    if (!meshRef.current) return;
-
-    // Интерполяция положения по параметру s ∈ [-1, 1]
-    let pos: THREE.Vector3;
-
-    if (s <= -0.33) {
-      // V- виток
-      const t = (s + 1) / 0.67; // 0 to 1
-      const idx = Math.floor(t * (vMinusPath.length - 1));
-      pos = vMinusPath[Math.max(0, Math.min(idx, vMinusPath.length - 1))];
-    } else if (s >= 0.33) {
-      // V+ виток
-      const t = (s - 0.33) / 0.67; // 0 to 1
-      const idx = Math.floor(t * (vPlusPath.length - 1));
-      pos = vPlusPath[Math.max(0, Math.min(idx, vPlusPath.length - 1))];
-    } else {
-      // S-петля (фаза инверсии)
-      const t = (s + 0.33) / 0.66; // 0 to 1
-      const idx = Math.floor(t * (sLoopPath.length - 1));
-      pos = sLoopPath[Math.max(0, Math.min(idx, sLoopPath.length - 1))];
+    if (pointRef.current) {
+      const t = Math.max(0, Math.min(1, phase));
+      const pos = curve.getPointAt(t);
+      pointRef.current.position.copy(pos);
     }
-
-    meshRef.current.position.copy(pos);
   });
 
   return (
-    <mesh ref={meshRef}>
-      <sphereGeometry args={[0.25, 32, 32]} />
-      <meshPhongMaterial
-        color="#ffffff"
-        emissive="#ffffff"
-        emissiveIntensity={2}
-      />
-    </mesh>
+    <group>
+      <mesh>
+        <tubeGeometry args={[curve, 120, 0.05, 10, false]} />
+        <meshStandardMaterial
+          color="#fbbf24"
+          emissive="#b45309"
+          emissiveIntensity={1.1}
+          transparent
+          opacity={0.95}
+        />
+      </mesh>
+
+      <mesh ref={pointRef}>
+        <sphereGeometry args={[0.14, 20, 20]} />
+        <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={2.5} />
+      </mesh>
+    </group>
   );
 }
 
-// Сфира как узел в сфиральном пространстве
+/* ============================================================
+   ДРЕВО СФИРОТ — центральная колонна совпадает с осью Сфирали
+   ============================================================ */
+
+const sefirotPositions: Record<number, [number, number, number]> = {
+  1: [0, 5, 0],        // Кетер
+  2: [1.5, 3.5, 0],    // Хохма
+  3: [-1.5, 3.5, 0],   // Бина
+  4: [1.5, 1.5, 0],    // Хесед
+  5: [-1.5, 1.5, 0],   // Гвура
+  6: [0, 0, 0],        // Тиферет — центр, узел инверсии
+  7: [1.5, -1.5, 0],   // Нецах
+  8: [-1.5, -1.5, 0],  // Ход
+  9: [0, -3, 0],       // Йесод
+  10: [0, -4.5, 0]     // Малхут
+};
+
 function SefiraNode({
-  sefirah,
+  id,
   isSelected,
   onClick
 }: {
-  sefirah: (typeof sefirot)[number];
+  id: number;
   isSelected: boolean;
   onClick: () => void;
 }) {
+  const sefirah = sefirot.find((s) => s.id === id);
   const meshRef = useRef<THREE.Mesh>(null);
-
-  // Расположение сфирот в сфиральной топологии:
-  // Кетер - верх над V+
-  // Тиферет - центр S-петли (0,0,0)
-  // Малхут - низ под V-
-  const getSefiraPosition = (id: number): [number, number, number] => {
-    switch (id) {
-      case 1: return [0, 6, 0];      // Кетер - над V+
-      case 2: return [2.5, 4.5, 1];  // Хохма - на V+
-      case 3: return [-2.5, 4.5, -1]; // Бина - зеркально
-      case 4: return [3, 2, 1.5];    // Хесед - правая колонна
-      case 5: return [-3, 2, -1.5];  // Гвура - левая колонна
-      case 6: return [0, 0, 0];      // Тиферет - ЦЕНТР S-петли
-      case 7: return [2.5, -2, 1];   // Нецах
-      case 8: return [-2.5, -2, -1]; // Ход
-      case 9: return [0, -4, 0];     // Йесод
-      case 10: return [0, -6, 0];    // Малхут - под V-
-      default: return [0, 0, 0];
-    }
-  };
-
-  const position = getSefiraPosition(sefirah.id);
+  const position = sefirotPositions[id];
 
   useFrame((state) => {
     if (meshRef.current && isSelected) {
-      meshRef.current.rotation.y = state.clock.elapsedTime * 0.8;
+      meshRef.current.rotation.y = state.clock.elapsedTime * 0.9;
     }
   });
+
+  if (!sefirah || !position) return null;
 
   return (
     <group position={position}>
       <mesh>
-        <sphereGeometry args={[0.5, 32, 32]} />
+        <sphereGeometry args={[0.42, 32, 32]} />
         <meshBasicMaterial
           color={sefirah.color}
           transparent
-          opacity={isSelected ? 0.35 : 0.15}
+          opacity={isSelected ? 0.35 : 0.14}
         />
       </mesh>
 
       <mesh ref={meshRef} onClick={onClick}>
-        <sphereGeometry args={[0.35, 32, 32]} />
+        <sphereGeometry args={[0.28, 32, 32]} />
         <meshStandardMaterial
           color={sefirah.color}
           emissive={sefirah.color}
-          emissiveIntensity={isSelected ? 1.5 : 0.5}
+          emissiveIntensity={isSelected ? 1.6 : 0.55}
           metalness={0.4}
           roughness={0.3}
         />
       </mesh>
 
-      <Text
-        position={[0, 0, 0.4]}
-        fontSize={0.25}
-        color="#05070f"
-        anchorX="center"
-        anchorY="middle"
-        fontWeight={700}
-      >
+      <Text position={[0, 0, 0.34]} fontSize={0.2} color="#05070f" anchorX="center" anchorY="middle" fontWeight={700}>
         {sefirah.id}
       </Text>
 
-      <Text
-        position={[0, -0.65, 0]}
-        fontSize={0.2}
-        color="#f5f1e8"
-        anchorX="center"
-        anchorY="middle"
-      >
+      <Text position={[0, -0.55, 0]} fontSize={0.16} color="#f5f1e8" anchorX="center" anchorY="middle">
         {sefirah.name}
       </Text>
 
-      <Text
-        position={[0, -0.9, 0]}
-        fontSize={0.17}
-        color="#b8b2a7"
-        anchorX="center"
-        anchorY="middle"
-      >
+      <Text position={[0, -0.76, 0]} fontSize={0.13} color="#b8b2a7" anchorX="center" anchorY="middle">
         {sefirah.hebrew}
       </Text>
     </group>
   );
 }
 
-// Пути между сфиротами (22 пути Древа)
 function TreePaths({ selected }: { selected: number | null }) {
-  const getSefiraPosition = (id: number): [number, number, number] => {
-    switch (id) {
-      case 1: return [0, 6, 0];
-      case 2: return [2.5, 4.5, 1];
-      case 3: return [-2.5, 4.5, -1];
-      case 4: return [3, 2, 1.5];
-      case 5: return [-3, 2, -1.5];
-      case 6: return [0, 0, 0];
-      case 7: return [2.5, -2, 1];
-      case 8: return [-2.5, -2, -1];
-      case 9: return [0, -4, 0];
-      case 10: return [0, -6, 0];
-      default: return [0, 0, 0];
-    }
-  };
-
   return (
     <>
-      {treeEdges.map(([from, to], index) => {
+      {treeEdges.map(([from, to], i) => {
+        const p1 = sefirotPositions[from];
+        const p2 = sefirotPositions[to];
+        if (!p1 || !p2) return null;
+
         const active = selected !== null && (selected === from || selected === to);
-        const p1 = getSefiraPosition(from);
-        const p2 = getSefiraPosition(to);
 
         return (
-          <line key={index}>
-            <bufferGeometry>
-              <bufferAttribute
-                attach="attributes-position"
-                count={2}
-                array={new Float32Array([...p1, ...p2])}
-                itemSize={3}
-              />
-            </bufferGeometry>
-            <lineBasicMaterial
-              color={active ? '#ffffff' : '#d4af37'}
-              transparent
-              opacity={active ? 1 : 0.4}
-              linewidth={active ? 2 : 1}
-            />
-          </line>
+          <Line
+            key={i}
+            points={[p1, p2]}
+            color={active ? '#ffffff' : '#d4af37'}
+            lineWidth={active ? 3 : 1.4}
+            transparent
+            opacity={active ? 1 : 0.5}
+          />
         );
       })}
     </>
   );
 }
 
-// Подписи зон
-function ZoneLabels() {
-  return (
-    <>
-      <Html position={[5, -3, 0]}>
-        <div style={{ color: '#38bdf8', fontSize: 14, whiteSpace: 'nowrap', textShadow: '0 0 8px #38bdf8' }}>
-          V⁻ (прошлое)
-        </div>
-      </Html>
-      <Html position={[-5, 3, 0]}>
-        <div style={{ color: '#a78bfa', fontSize: 14, whiteSpace: 'nowrap', textShadow: '0 0 8px #a78bfa' }}>
-          V⁺ (будущее)
-        </div>
-      </Html>
-      <Html position={[2.5, 0, 0]}>
-        <div style={{ color: '#fbbf24', fontSize: 14, whiteSpace: 'nowrap', textShadow: '0 0 8px #fbbf24' }}>
-          S-петля (инверсия)
-        </div>
-      </Html>
-    </>
-  );
+/* ============================================================
+   ГЛАВНАЯ СЦЕНА
+   ============================================================ */
+
+interface Props {
+  selectedSefira: number | null;
+  onSelectSefira: (id: number) => void;
+  activeSfiralIndex: number;
+  sfiralPhase: number;
+  fractalLevels: boolean[];
+  universeOpacity: number;
 }
 
-// Главная сцена
-export default function UnifiedTreeSfiral3D({ selected, onSelect, sfiralS }: Props) {
-  const { vMinusPath, vPlusPath, sLoopPath } = useMemo(generateSfiralGeometry, []);
-
+export default function UnifiedTreeSfiral3D({
+  selectedSefira,
+  onSelectSefira,
+  activeSfiralIndex,
+  sfiralPhase,
+  fractalLevels,
+  universeOpacity
+}: Props) {
   return (
-    <div style={{ height: 700, borderRadius: 20, overflow: 'hidden' }}>
-      <Canvas camera={{ position: [0, 2, 14], fov: 55 }}>
+    <div style={{ width: '100%', height: '100%' }}>
+      <Canvas camera={{ position: [9, 3, 13], fov: 45 }}>
         <color attach="background" args={['#0f172a']} />
-        <Stars radius={50} depth={50} count={3000} factor={4} saturation={0} fade speed={0.5} />
+        <Stars radius={90} depth={50} count={3500} factor={4} saturation={0} fade speed={0.5} />
 
         <ambientLight intensity={0.6} />
-        <pointLight position={[-10, 10, 10]} intensity={1.5} color="#38bdf8" />
-        <pointLight position={[10, -10, 10]} intensity={1.5} color="#a78bfa" />
+        <pointLight position={[-10, 10, 10]} intensity={1.4} color="#38bdf8" />
+        <pointLight position={[10, -10, 10]} intensity={1.4} color="#a78bfa" />
         <pointLight position={[0, 0, 8]} intensity={1} color="#fbbf24" />
 
-        {/* Настоящая Сфираль: два зеркальных витка + S-петля */}
-        <SfiralCoil path={vMinusPath} color="#38bdf8" emissive="#1e40af" />
-        <SfiralCoil path={vPlusPath} color="#a78bfa" emissive="#5b21b6" />
-        <SfiralLoop path={sLoopPath} />
+        {/* Полупрозрачная модель Вселенной: круговорот Сфиралей вокруг Древа */}
+        <UniverseModel levels={fractalLevels} opacity={universeOpacity} />
 
-        {/* Центральный узел (Тиферет / Даат) */}
-        <CentralNode />
+        {/* Активная (подсвеченная) Сфираль */}
+        <ActiveSfiral index={activeSfiralIndex} phase={sfiralPhase} numGroups={72} />
 
-        {/* Движущаяся точка фазы s */}
-        <MovingPhasePoint s={sfiralS} />
-
-        {/* Пути Древа Сфирот */}
-        <TreePaths selected={selected} />
-
-        {/* 10 сфирот в сфиральной топологии */}
-        {sefirot.map((sefirah) => (
+        {/* Древо Сфирот внутри, на центральной оси */}
+        <TreePaths selected={selectedSefira} />
+        {sefirot.map((s) => (
           <SefiraNode
-            key={sefirah.id}
-            sefirah={sefirah}
-            isSelected={selected === sefirah.id}
-            onClick={() => onSelect(sefirah.id)}
+            key={s.id}
+            id={s.id}
+            isSelected={selectedSefira === s.id}
+            onClick={() => onSelectSefira(s.id)}
           />
         ))}
-
-        {/* Подписи зон */}
-        <ZoneLabels />
 
         <OrbitControls
           enablePan
           enableZoom
           enableRotate
           autoRotate
-          autoRotateSpeed={0.5}
-          minDistance={5}
-          maxDistance={30}
+          autoRotateSpeed={0.4}
+          minDistance={4}
+          maxDistance={40}
         />
       </Canvas>
     </div>
