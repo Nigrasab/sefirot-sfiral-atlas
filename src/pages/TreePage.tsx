@@ -4,14 +4,12 @@ import { pillarNames, sefirot } from '../data/sefirot';
 
 export default function TreePage() {
   const [selectedSefira, setSelectedSefira] = useState<number | null>(6);
-  const [activeSfiralIndex, setActiveSfiralIndex] = useState(0);
   const [sfiralPhase, setSfiralPhase] = useState(0.5);
+  const [activeSide, setActiveSide] = useState<1 | -1>(1);
   const [fractalLevels, setFractalLevels] = useState<boolean[]>([true, true, true]);
-  const [universeOpacity, setUniverseOpacity] = useState(0.14);
+  const [universeOpacity, setUniverseOpacity] = useState(0.12);
 
   const current = sefirot.find((s) => s.id === selectedSefira);
-  const groupAngle = ((activeSfiralIndex / 72) * 360).toFixed(1);
-  const linkedSefira = sefirot[(activeSfiralIndex % 10)];
 
   const toggleLevel = (idx: number) => {
     setFractalLevels((prev) => prev.map((v, i) => (i === idx ? !v : v)));
@@ -19,13 +17,13 @@ export default function TreePage() {
 
   return (
     <div className="tree-page-layout">
-      {/* Узкое вертикальное окно анимации */}
+      {/* Окно визуализации: узкое, вытянутое по вертикали */}
       <div className="animation-window">
         <UnifiedTreeSfiral3D
           selectedSefira={selectedSefira}
           onSelectSefira={setSelectedSefira}
-          activeSfiralIndex={activeSfiralIndex}
           sfiralPhase={sfiralPhase}
+          activeSide={activeSide}
           fractalLevels={fractalLevels}
           universeOpacity={universeOpacity}
         />
@@ -36,29 +34,15 @@ export default function TreePage() {
         <div className="panel">
           <h2>Древо · Сфираль</h2>
           <p className="muted small">
-            Модель расширяющейся Вселенной — полупрозрачный круговорот Сфиралей вокруг Древа.
-            Центральная колонна Древа совпадает с продольной осью Сфирали.
+            Модель расширяющейся Вселенной пространственно совмещена с Древом:
+            продольная ось Сфиралей = центральная колонна Древа.
+            Две зеркальные цепочки = левая и правая колонны.
           </p>
         </div>
 
-        {/* Активная Сфираль */}
+        {/* Активная сфиральная траектория */}
         <div className="panel">
-          <h3>Активная Сфираль</h3>
-
-          <div className="slider-row">
-            <div className="slider-head">
-              <span className="muted">Группа (0–71)</span>
-              <strong>{activeSfiralIndex}</strong>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={71}
-              step={1}
-              value={activeSfiralIndex}
-              onChange={(e) => setActiveSfiralIndex(Number(e.target.value))}
-            />
-          </div>
+          <h3>Сфиральная траектория</h3>
 
           <div className="slider-row">
             <div className="slider-head">
@@ -75,16 +59,26 @@ export default function TreePage() {
             />
           </div>
 
-          <div className="result-box">
-            <div className="small muted">Угол группы</div>
-            <div>{groupAngle}°</div>
-          </div>
+          <div className="fractal-toggles">
+            <label className="toggle-item">
+              <input
+                type="radio"
+                name="activeSide"
+                checked={activeSide === 1}
+                onChange={() => setActiveSide(1)}
+              />
+              <span>Правая цепочка (Хесед / Нецах)</span>
+            </label>
 
-          <div className="result-box" style={{ marginTop: 8 }}>
-            <div className="small muted">Связана с сфирой</div>
-            <div>
-              {linkedSefira ? `${linkedSefira.id}. ${linkedSefira.name} (${linkedSefira.hebrew})` : '—'}
-            </div>
+            <label className="toggle-item">
+              <input
+                type="radio"
+                name="activeSide"
+                checked={activeSide === -1}
+                onChange={() => setActiveSide(-1)}
+              />
+              <span>Левая цепочка (Гвура / Ход)</span>
+            </label>
           </div>
         </div>
 
@@ -114,7 +108,7 @@ export default function TreePage() {
                 checked={fractalLevels[0]}
                 onChange={() => toggleLevel(0)}
               />
-              <span>Масштаб 1</span>
+              <span>Масштаб 1 (144 узла)</span>
             </label>
 
             <label className="toggle-item">
@@ -123,7 +117,7 @@ export default function TreePage() {
                 checked={fractalLevels[1]}
                 onChange={() => toggleLevel(1)}
               />
-              <span>Масштаб 0.5</span>
+              <span>Масштаб 0.5 (288 узлов)</span>
             </label>
 
             <label className="toggle-item">
@@ -132,7 +126,7 @@ export default function TreePage() {
                 checked={fractalLevels[2]}
                 onChange={() => toggleLevel(2)}
               />
-              <span>Масштаб 0.25</span>
+              <span>Масштаб 0.25 (576 узлов)</span>
             </label>
           </div>
         </div>
@@ -172,8 +166,32 @@ export default function TreePage() {
               </div>
             </>
           ) : (
-            <p className="muted">Выберите сфиру в окне анимации.</p>
+            <p className="muted">Выберите сфиру в окне визуализации.</p>
           )}
+        </div>
+
+        {/* Структурное соответствие */}
+        <div className="panel">
+          <h4>Совмещение модели и Древа</h4>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Древо</th>
+                  <th>Модель</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>Центральная колонна</td><td>Продольная ось Сфиралей</td></tr>
+                <tr><td>Левая колонна</td><td>Левая цепочка (зеркальная)</td></tr>
+                <tr><td>Правая колонна</td><td>Правая цепочка</td></tr>
+                <tr><td>Тиферет</td><td>Узел инверсии / ROUTER_SWAP</td></tr>
+                <tr><td>Даат</td><td>S-переход</td></tr>
+                <tr><td>Эманация</td><td>Масштабное ветвление 1→0.5→0.25</td></tr>
+                <tr><td>22 пути</td><td>Классы траекторий перехода</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
